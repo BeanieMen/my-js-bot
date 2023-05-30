@@ -1,0 +1,14 @@
+name: Spinny spinny thing
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install node
+        uses: actions/setup-node@v3
+      - run: node -v
+      - run: echo "hi i am script"
