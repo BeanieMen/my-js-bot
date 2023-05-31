@@ -2,6 +2,12 @@ const { Events } = require('discord.js');
 const words = require("../commands/res/words.js")["WORDS"]
 const fs = require("fs");
 
+const write = (path, data) => {
+	fs.writeFile(path, data, 'utf8', (err) => {
+		if (err) throw err;
+		console.log("written")
+	})
+}
 
 module.exports = {
 	name: Events.MessageCreate,
@@ -25,17 +31,18 @@ module.exports = {
 					console.log(data)
 					data = JSON.stringify(data);
 					console.log(data)
-					fs.writeFile('./game.json', data, 'utf8', (err) => {
-						if (err) throw err;
-						console.log('Data written to file');
-					});
+					write("./game.json", data)
 
-					await msg.reply(current_word)
 					break
 
 				case "guess":
 					data = fs.readFileSync("./game.json", 'utf8')
 					data = JSON.parse(data)
+					authid = msg.author.id
+					if (!data[msg.author.id]) {
+						msg.reply("please start the game by doing ```/wordle start``` ")
+					}
+
 					let original = data[msg.author.id]["word"].split("")
 					let bot_reply = ""
 					if (!msglist[2]) {
@@ -47,32 +54,40 @@ module.exports = {
 					}
 
 					guess = msglist[2].split("")
-					console.log(guess, original)
-					if (guess == original) {
+
+					if (guess.join("") == original.join("")) {
 						data[msg.author.id]["tries"] -= 1
 						msg.reply(`You got it in ${6 - data[msg.author.id]["tries"]} tries`)
+						delete data.authid
+						write("./game.json", data)
 					}
-					for (i = 0; i < guess.length; i++) {
-						if (guess[i] == original[i]) {
-							bot_reply += ":green_circle:"
+					else {
+						for (i = 0; i < guess.length; i++) {
+							if (guess[i] == original[i]) {
+								bot_reply += ":green_circle:"
+							}
+							else if (original.includes(guess[i])) {
+								bot_reply += ":yellow_circle:";
+							}
+							else {
+								bot_reply += ":black_circle:"
+							}
 						}
-						else if (original.includes(guess[i])) {
-							bot_reply += ":yellow_circle:";
+
+						data[msg.author.id]["tries"] -= 1
+						if (data[msg.author.id]["tries"] == 0) {
+							msg.reply("You lost, The word was " + data[msg.author.id]["word"])
+							delete data.authid
+							write("./game.json", data)
+
 						}
 						else {
-							bot_reply += ":black_circle:"
+							msg.reply(bot_reply)
+							msg.reply(`You have ${data[msg.author.id]["tries"]} left`)
+							data = JSON.stringify(data)
+							write("./game.json", data)
 						}
 					}
-
-					data[msg.author.id]["tries"] -= 1
-					msg.reply(bot_reply)
-					msg.reply(`You have ${data[msg.author.id]["tries"]} left`)
-					data = JSON.stringify(data)
-
-					fs.writeFile('./game.json', data, 'utf8', (err) => {
-						if (err) throw err;
-						console.log("written");
-					});
 
 			}
 
